@@ -33,6 +33,10 @@ func main() {
 		fmt.Println(err)
 		return
 	}
+	err = client.SetEncodings([]vnc.Encoding{
+		&vnc.ZlibEncoding{},
+		&vnc.RawEncoding{},
+	})
 	fmt.Printf("h:%d,w:%d\n", client.FrameBufferHeight, client.FrameBufferWidth)
 	fmt.Println("Begin-CreateWindow")
 	window, err := sdl.CreateWindow("SDL", 0, 20,
@@ -67,16 +71,20 @@ func main() {
 
 			select {
 			case msg := <-c:
-
-
 				switch t := msg.(type) {
 				case *vnc.FramebufferUpdateMessage:
 					//fmt.Println("FramebufferUpdateMessage")
 					for _, rect := range t.Rectangles {
-						//fmt.Printf("%v", rect)
-						raw := rect.Enc.(*vnc.RawEncoding)
+						var rawPixel []uint32
+						switch t:=rect.Enc.(type)  {
+						case *vnc.RawEncoding:
+							rawPixel=t.RawPixel
+						case *vnc.ZlibEncoding:
+							rawPixel=t.RawPixel
+						}
+						//raw,_ := rect.Enc.(*vnc.RawEncoding)
 						sdlRect := sdl.Rect{X: int32(rect.X), Y: int32(rect.Y), W: int32(rect.Width), H: int32(rect.Height)}
-						err := texture.UpdateRGBA(&sdlRect, raw.RawPixel, int(rect.Width))
+						err := texture.UpdateRGBA(&sdlRect, rawPixel, int(rect.Width))
 						if err != nil {
 							fmt.Println(err)
 							continue
